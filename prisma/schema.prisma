@@ -1,0 +1,47 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(cuid())
+  email       String       @unique
+  connections Connection[]
+  history     QueryLog[]
+  createdAt   DateTime     @default(now())
+}
+
+model Connection {
+  id              String     @id @default(cuid())
+  name            String     // e.g. "My Prod DB"
+  
+  // Security: Store the encrypted string, NOT the raw one
+  encryptedString String
+  
+  userId          String
+  user            User       @relation(fields: [userId], references: [id])
+  queries         QueryLog[]
+  
+  createdAt       DateTime   @default(now())
+}
+
+model QueryLog {
+  id            String     @id @default(cuid())
+  sql           String     // The actual SQL query run
+  success       Boolean
+  durationMs    Int        // How long it took
+  
+  connectionId  String?
+  connection    Connection? @relation(fields: [connectionId], references: [id])
+  
+  userId        String?
+  user          User?       @relation(fields: [userId], references: [id])
+  
+  createdAt     DateTime   @default(now())
+}
