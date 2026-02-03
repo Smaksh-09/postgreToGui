@@ -1,4 +1,4 @@
-// lib/db-connect.ts
+// lib/db-connect
 import { Client } from 'pg';
 
 export async function getDbClient(connectionString: string) {
