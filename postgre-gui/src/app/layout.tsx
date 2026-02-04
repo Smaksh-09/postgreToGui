@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google"; // or your font
 import "./globals.css";
 import NextAuthSessionProvider from "../components/providers/SessionProvider";
-import FloatingNavbar from "../components/ui/navbar";
+import NavbarGate from "../components/ui/NavbarGate";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,7 +21,7 @@ export default function RootLayout({
       <body className={`${inter.className} bg-midnight-950 text-white antialiased`}>
         {/* Wrap everything in the Session Provider */}
         <NextAuthSessionProvider>
-          <FloatingNavbar />
+          <NavbarGate />
           {children}
         </NextAuthSessionProvider>
       </body>

@@ -7,15 +7,12 @@ const cardBase =
 
 export default function FourthSection() {
   return (
-    // 1. CHANGED bg-black -> bg-midnight-950 to match the previous section perfectly.
-    // 2. INCREASED overlap: -mt-10 -> -mt-20 to physically pull the gradients together.
+
     <section className="relative -mt-20 w-full bg-midnight-950 py-24">
       
-      {/* --- THE FIX: TOP GLOW --- */}
-      {/* A strong radial glow that sits BEHIND the cards but ON TOP of the section seam. */}
+
       <div className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-orange-500/20 via-orange-900/5 to-transparent blur-[60px] z-0" />
-      
-      {/* A subtle linear gradient to wash the top edge */}
+
       <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-orange-500/5 to-transparent z-0" />
 
       <div className="mx-auto w-full max-w-6xl px-6 relative z-10">
