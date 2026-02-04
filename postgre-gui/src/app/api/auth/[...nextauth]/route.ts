@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GITHUB_ID!,
       clientSecret: process.env.GITHUB_SECRET!,
     }),
-    // Add GoogleProvider here if you want
+
   ],
   session: {
     strategy: "jwt", // Easier for middleware & serverless

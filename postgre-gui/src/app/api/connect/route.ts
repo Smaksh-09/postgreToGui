@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 // 1. Import NextAuth tools
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...next_auth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const ConnectSchema = z.object({
   connectionString: z.string().refine(

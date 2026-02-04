@@ -76,6 +76,7 @@ function LogoItem({ logo }: { logo: LogoItem }) {
           {logo.label}
         </span>
       )}
+      
     </div>
   );
 }
