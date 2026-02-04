@@ -3,6 +3,7 @@ import Image from "next/image";
 import Hero from "../components/ui/Hero";
 import Loop from "../components/ui/Loop";
 import ThirdSection from "../components/ui/ThirdSection";
+import FourthSection from "../components/ui/FourthSection";
 
 export default function Home() {
   return (
@@ -46,8 +47,9 @@ export default function Home() {
 
       </section>
 
-      {/* The next section */}
+      {/* The next sections */}
       <ThirdSection />
+      <FourthSection />
     </main>
   );
 }
