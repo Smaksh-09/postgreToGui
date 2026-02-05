@@ -3,10 +3,15 @@
 import Sidebar from "../../../components/Dashboard/Sidebar";
 import { Sparkles, Play, Share2, MoreHorizontal, Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
+import ResultsTable from "../../../components/ui/ResultsTable";
+import { useState } from "react";
+import SchemaGraph from "../../../components/ui/SchemaGraph";
 
 export default function VisualizerPage() {
+  const [activeTable, setActiveTable] = useState("");
+
   return (
-    <div className="flex h-screen w-full bg-midnight-950">
+    <div className="flex h-screen w-full bg-midnight-950 text-white">
       <Sidebar />
       
       {/* Main Content Area */}
@@ -39,26 +44,25 @@ export default function VisualizerPage() {
         {/* WORKSPACE CANVAS */}
         <div className="relative flex-1 bg-[url('/grid-pattern.svg')] bg-center [mask-image:linear-gradient(to_bottom,white,transparent)]">
           
-          {/* Mock Visualizer Empty State (Or Graph Placeholder) */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <div className="relative mx-auto h-24 w-24">
-                <div className="absolute inset-0 rounded-full bg-orange-500/20 blur-xl animate-pulse" />
-                <div className="relative flex h-full w-full items-center justify-center rounded-full border border-white/10 bg-black/40 backdrop-blur-md">
-                   <Sparkles className="h-10 w-10 text-orange-500" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-white">AI Schema Engine Ready</h3>
-                <p className="text-sm text-white/40 max-w-xs mx-auto mt-1">
-                  Ask a question below to generate a query, or drag tables to visualize relationships.
-                </p>
-              </div>
+          {/* CONDITIONAL RENDER: Graph vs Table */}
+          {activeTable ? (
+            <div className="absolute inset-0 z-20 bg-midnight-950 pb-16">
+              <button
+                onClick={() => setActiveTable("")}
+                className="absolute right-4 top-4 z-50 rounded bg-white/10 px-3 py-1 text-xs hover:bg-white/20"
+              >
+                Close Table ✕
+              </button>
+              <ResultsTable activeTable={activeTable} />
             </div>
-          </div>
+          ) : (
+            <div className="absolute inset-0 z-10">
+              <SchemaGraph onNodeClick={(name) => setActiveTable(name)} />
+            </div>
+          )}
 
           {/* Floating AI Command Bar */}
-          <div className="absolute bottom-8 left-1/2 w-full max-w-2xl -translate-x-1/2 px-4">
+          <div className="absolute bottom-8 left-1/2 z-30 w-full max-w-2xl -translate-x-1/2 px-4">
             <motion.div 
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
