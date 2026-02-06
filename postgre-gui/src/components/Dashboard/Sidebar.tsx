@@ -1,16 +1,23 @@
 "use client";
 
-import { Search, Table2, Database, History, Settings, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { Search, Table2, Database, History, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 
-const MOCK_TABLES = [
-  "users", "orders", "products", "transactions", "analytics_events", "schema_migrations"
-];
+interface SidebarProps {
+  tables: string[];
+  activeTable: string;
+  onSelectTable: (table: string) => void;
+  isLoading?: boolean;
+  onOpenHistory?: () => void;
+}
 
-export default function Sidebar() {
-  const [activeTable, setActiveTable] = useState("users");
-
+export default function Sidebar({
+  tables,
+  activeTable,
+  onSelectTable,
+  isLoading = false,
+  onOpenHistory,
+}: SidebarProps) {
   return (
     <aside className="relative flex h-full w-64 flex-col border-r border-white/10 bg-[#050505]/80 backdrop-blur-xl">
       
@@ -41,31 +48,48 @@ export default function Sidebar() {
         </div>
         
         <div className="space-y-0.5">
-          {MOCK_TABLES.map((table) => (
-            <button
-              key={table}
-              onClick={() => setActiveTable(table)}
-              className={`group flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-all ${
-                activeTable === table 
-                  ? "bg-orange-500/10 text-orange-400" 
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Table2 className={`h-4 w-4 ${activeTable === table ? "text-orange-500" : "text-white/40"}`} />
-                <span>{table}</span>
-              </div>
-              {activeTable === table && (
-                <motion.div layoutId="active-indicator" className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-              )}
-            </button>
-          ))}
+          {isLoading && (
+            <div className="px-3 py-2 text-xs text-white/30">Loading tables...</div>
+          )}
+          {!isLoading && tables.length === 0 && (
+            <div className="px-3 py-2 text-xs text-white/30">No tables found</div>
+          )}
+          {!isLoading &&
+            tables.map((table) => (
+              <button
+                key={table}
+                onClick={() => onSelectTable(table)}
+                className={`group flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-all ${
+                  activeTable === table
+                    ? "bg-orange-500/10 text-orange-400"
+                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Table2
+                    className={`h-4 w-4 ${
+                      activeTable === table ? "text-orange-500" : "text-white/40"
+                    }`}
+                  />
+                  <span>{table}</span>
+                </div>
+                {activeTable === table && (
+                  <motion.div
+                    layoutId="active-indicator"
+                    className="h-1.5 w-1.5 rounded-full bg-orange-500"
+                  />
+                )}
+              </button>
+            ))}
         </div>
       </div>
 
       {/* Footer Actions */}
       <div className="border-t border-white/10 p-3 space-y-1">
-        <button className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors">
+        <button
+          onClick={onOpenHistory}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+        >
           <History className="h-4 w-4" />
           <span>Query History</span>
         </button>

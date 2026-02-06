@@ -3,7 +3,6 @@
 import React, { useCallback, useMemo } from 'react';
 import ReactFlow, {
   Background,
-  Controls,
   Edge,
   Node,
   useNodesState,
@@ -134,7 +133,6 @@ export default function SchemaGraph({ onNodeClick }: { onNodeClick?: (tableName:
             size={1} 
             color="rgba(255, 255, 255, 0.1)" 
         />
-        <Controls className="!bg-[#0c0c0c] !border !border-white/10 !fill-white" />
       </ReactFlow>
     </div>
   );
