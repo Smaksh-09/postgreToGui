@@ -54,10 +54,6 @@ model User {
 
   sessions      Session[]
 
-  
-
-  // 2. YOUR App's Custom Relations (Keep these!)
-
   connections   Connection[]
 
   history       QueryLog[]
@@ -130,13 +126,8 @@ model Connection {
 
   name            String     // e.g. "My Prod DB"
 
-  
-
-  // Security: Store the encrypted string, NOT the raw one
 
   encryptedString String
-
-  
 
   userId          String
 

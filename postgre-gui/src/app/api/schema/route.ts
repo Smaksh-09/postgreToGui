@@ -1,41 +1,79 @@
-import { NextResponse } from 'next/server';
-import { decrypt } from '@/lib/crypto';
-import { getDbClient, closeDbClient } from '@/lib/db-connect';
-import { cookies } from 'next/headers';
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import { Client } from "pg"; 
+import { decrypt } from "@/lib/crypto"; // <--- Import decrypt
 
-export async function GET() {
-  const cookieStore = await cookies();
-
-  const encryptedString = cookieStore.get('db_session_guest')?.value;
-
-  if (!encryptedString) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  let client;
+export async function GET(req: Request) {
   try {
-    const connectionString = await decrypt(encryptedString);
-    client = await getDbClient(connectionString);
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    // This scary looking query fetches all Tables + Columns + Types
-    const introspectionQuery = `
-      SELECT 
-        t.table_name,
-        json_agg(json_build_object(
-          'column_name', c.column_name, 
-          'data_type', c.data_type
-        )) as columns
-      FROM information_schema.tables t
-      JOIN information_schema.columns c ON t.table_name = c.table_name
-      WHERE t.table_schema = 'public'
-      GROUP BY t.table_name;
+    // 1. Fetch the user's active connection
+    const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        // Grab the most recent connection
+        include: { connections: { orderBy: { createdAt: 'desc' }, take: 1 } }
+    });
+
+    const connection = user?.connections[0];
+
+    if (!connection) {
+        return NextResponse.json({ error: "No database connected" }, { status: 404 });
+    }
+
+    // 2. DECRYPT the connection string
+    // We cannot pass 'encryptedString' to pg.Client, it needs the real password.
+    const realConnectionString = await decrypt(connection.encryptedString);
+
+    // 3. Connect to the USER'S database
+    const client = new Client({
+      connectionString: realConnectionString,
+      ssl: { rejectUnauthorized: false } // Required for most cloud DBs (Neon, Supabase)
+    });
+
+    await client.connect();
+
+    // 4. Query the System Catalog (Information Schema)
+    // This SQL works on every Postgres database to list tables and columns
+    const query = `
+      SELECT table_name, column_name, data_type, is_nullable
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name, ordinal_position;
     `;
 
-    const result = await client.query(introspectionQuery);
-    return NextResponse.json(result.rows);
+    const result = await client.query(query);
+    await client.end(); // Close connection immediately
 
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to fetch schema" }, { status: 500 });
-  } finally {
-    if (client) await closeDbClient(client);
+    // 5. Transform flat rows into a nested structure for Frontend
+    // Rows come in like: [ {table: 'users', col: 'id'}, {table: 'users', col: 'email'} ]
+    // We want: [ { table_name: 'users', columns: [...] } ]
+    const tables: Record<string, any[]> = {};
+    
+    result.rows.forEach((row) => {
+      if (!tables[row.table_name]) {
+        tables[row.table_name] = [];
+      }
+      tables[row.table_name].push({
+        name: row.column_name,
+        type: row.data_type,
+        // You can add more metadata here if you want (e.g. isPk)
+      });
+    });
+
+    const schema = Object.entries(tables).map(([name, cols]) => ({
+      table_name: name,
+      columns: cols
+    }));
+
+    return NextResponse.json(schema);
+
+  } catch (error: any) {
+    console.error("Schema Fetch Error:", error);
+    return NextResponse.json({ error: "Failed to fetch schema. Check your connection string." }, { status: 500 });
   }
 }

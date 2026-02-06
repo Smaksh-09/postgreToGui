@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { encrypt } from '@/lib/crypto';
-import { getDbClient, closeDbClient } from '@/lib/db-connect';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 

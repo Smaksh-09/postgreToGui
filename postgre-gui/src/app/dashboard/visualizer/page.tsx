@@ -37,13 +37,51 @@ export default function VisualizerPage() {
     fetchSchema();
   }, []);
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleInputKeyDown = async (
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Enter" && inputValue.trim()) {
+      const question = inputValue.trim();
+      setInputValue("");
+
+      // 1. Show Drawer immediately (Loading State)
       setDrawerEntry({
-        question: inputValue.trim(),
+        question,
         generatedSql: "",
       });
-      setInputValue("");
+
+      try {
+        // 2. Prepare Context
+        const schemaContext = activeTable
+          ? { tableName: activeTable }
+          : { tables };
+
+        // 3. Call Your API
+        const res = await fetch("/api/query/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: question,
+            schemaContext,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error);
+
+        // 4. Update Drawer with Real SQL
+        setDrawerEntry((prev) =>
+          prev ? { ...prev, generatedSql: data.sql } : null
+        );
+      } catch (error) {
+        console.error("AI Gen Failed:", error);
+        setDrawerEntry((prev) =>
+          prev
+            ? { ...prev, generatedSql: "-- Error: Could not generate SQL." }
+            : null
+        );
+      }
     }
   };
 
