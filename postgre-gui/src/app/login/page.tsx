@@ -4,8 +4,7 @@ import { signIn } from "next-auth/react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { FaGithub, FaGoogle } from "react-icons/fa"; // Standard icons
-import { Sparkles, ArrowRight } from "lucide-react";
-import Link from "next/link";
+import { Sparkles, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
@@ -61,7 +60,11 @@ export default function LoginPage() {
               disabled={!!isLoading}
               className="group relative flex w-full items-center justify-center gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
             >
-              <FaGithub className="h-5 w-5 text-white/80 group-hover:text-white" />
+              {isLoading === "github" ? (
+                <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+              ) : (
+                <FaGithub className="h-5 w-5 text-white/80 group-hover:text-white" />
+              )}
               <span>
                 {isLoading === "github" ? "Connecting..." : "Continue with GitHub"}
               </span>
@@ -75,34 +78,15 @@ export default function LoginPage() {
               disabled={!!isLoading}
               className="group relative flex w-full items-center justify-center gap-3 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
             >
-              <FaGoogle className="h-4 w-4 text-white/80 group-hover:text-white" />
+              {isLoading === "google" ? (
+                <Loader2 className="h-4 w-4 animate-spin text-orange-500" />
+              ) : (
+                <FaGoogle className="h-4 w-4 text-white/80 group-hover:text-white" />
+              )}
               <span>
                 {isLoading === "google" ? "Connecting..." : "Continue with Google"}
               </span>
             </button>
-          </div>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#0c0c0c] px-2 text-white/30">
-                Or continue as guest
-              </span>
-            </div>
-          </div>
-
-          {/* Guest Link */}
-          <div className="text-center">
-            <Link 
-              href="/dashboard" 
-              className="inline-flex items-center gap-1 text-sm text-white/40 hover:text-orange-400 transition-colors"
-            >
-              <span>Enter read-only mode</span>
-              <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
 
         </div>

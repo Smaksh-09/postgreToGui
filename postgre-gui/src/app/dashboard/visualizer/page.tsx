@@ -1,7 +1,7 @@
 "use client";
 
 import Sidebar from "../../../components/Dashboard/Sidebar";
-import { Sparkles, Play, Share2, Maximize2 } from "lucide-react";
+import { Sparkles, Play, Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import ResultsTable from "../../../components/ui/ResultsTable";
 import { useEffect, useState } from "react";
@@ -11,10 +11,14 @@ import QueryDrawer, {
   QueryDrawerEntry,
 } from "../../../components/ui/QueryDrawer";
 import QueryHistory from "../../../components/ui/QueryHistory";
+import LoadingSpinner from "../../../components/ui/LoadingSpinner";
 
 export default function VisualizerPage() {
   const router = useRouter();
-  const [schemaData, setSchemaData] = useState<any[]>([]);
+  const [schemaData, setSchemaData] = useState<{ tables: any[]; relations: any[] }>({
+    tables: [],
+    relations: [],
+  });
   const [tableNames, setTableNames] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState("");
   const [loading, setLoading] = useState(true);
@@ -33,8 +37,10 @@ export default function VisualizerPage() {
         if (!res.ok) throw new Error("Failed to fetch schema");
 
         const data = await res.json();
-        setSchemaData(data);
-        setTableNames(data.map((t: any) => t.table_name));
+        if (data.schema) {
+          setSchemaData({ tables: data.schema, relations: data.relations });
+          setTableNames(data.schema.map((t: any) => t.table_name));
+        }
       } catch (error) {
         console.error(error);
       } finally {
@@ -118,10 +124,14 @@ export default function VisualizerPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 transition-colors border border-white/5">
-              <Share2 className="h-3.5 w-3.5" />
-              Share
-            </button>
+            {activeTable && (
+              <button
+                onClick={() => setActiveTable("")}
+                className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition-colors"
+              >
+                Close Table ✕
+              </button>
+            )}
             <button className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-500 transition-colors shadow-[0_0_15px_rgba(234,88,12,0.3)]">
               <Play className="h-3.5 w-3.5 fill-current" />
               Run Query
@@ -131,22 +141,24 @@ export default function VisualizerPage() {
 
         {/* WORKSPACE CANVAS */}
         <div className="relative flex-1 bg-[url('/grid-pattern.svg')] bg-center">
+          {loading && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#050505]/70 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-sm text-white/60">
+                <LoadingSpinner size={18} />
+                Loading schema...
+              </div>
+            </div>
+          )}
           
           {/* Main View: Graph vs Table */}
           {activeTable ? (
             <div className="absolute inset-0 z-20 bg-midnight-950 pb-16">
-              <button
-                onClick={() => setActiveTable("")}
-                className="absolute right-4 top-4 z-50 rounded bg-white/10 px-3 py-1 text-xs hover:bg-white/20 transition-colors"
-              >
-                Close Table ✕
-              </button>
               <ResultsTable activeTable={activeTable} />
             </div>
           ) : (
             <div className="absolute inset-0 z-10">
               <SchemaGraph
-                tables={schemaData}
+                data={schemaData}
                 onNodeClick={(name) => setActiveTable(name)}
               />
             </div>

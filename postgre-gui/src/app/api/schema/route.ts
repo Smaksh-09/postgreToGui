@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import {authOptions} from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Client } from "pg"; 
 import { decrypt } from "@/lib/crypto"; // <--- Import decrypt
@@ -37,40 +37,56 @@ export async function GET(req: Request) {
 
     await client.connect();
 
-    // 4. Query the System Catalog (Information Schema)
-    // This SQL works on every Postgres database to list tables and columns
-    const query = `
-      SELECT table_name, column_name, data_type, is_nullable
+    // 4. Query A: Get Tables & Columns
+    const tablesQuery = `
+      SELECT table_name, column_name, data_type
       FROM information_schema.columns 
-      WHERE table_schema = 'public' 
+      WHERE table_schema NOT IN ('information_schema', 'pg_catalog') 
       ORDER BY table_name, ordinal_position;
     `;
 
-    const result = await client.query(query);
+    // 5. Query B: Get Foreign Keys
+    const relationsQuery = `
+      SELECT
+          tc.table_name AS source_table,
+          kcu.column_name AS source_column,
+          ccu.table_name AS target_table,
+          ccu.column_name AS target_column
+      FROM
+          information_schema.table_constraints AS tc
+          JOIN information_schema.key_column_usage AS kcu
+            ON tc.constraint_name = kcu.constraint_name
+            AND tc.table_schema = kcu.table_schema
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+            AND ccu.table_schema = tc.table_schema
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema NOT IN ('information_schema', 'pg_catalog');
+    `;
+
+    const [tablesRes, relationsRes] = await Promise.all([
+      client.query(tablesQuery),
+      client.query(relationsQuery)
+    ]);
+
     await client.end(); // Close connection immediately
 
-    // 5. Transform flat rows into a nested structure for Frontend
-    // Rows come in like: [ {table: 'users', col: 'id'}, {table: 'users', col: 'email'} ]
-    // We want: [ { table_name: 'users', columns: [...] } ]
-    const tables: Record<string, any[]> = {};
-    
-    result.rows.forEach((row) => {
-      if (!tables[row.table_name]) {
-        tables[row.table_name] = [];
+    // 6. Transform Data
+    const tablesMap = new Map<string, { table_name: string; columns: any[] }>();
+    tablesRes.rows.forEach((row: any) => {
+      if (!tablesMap.has(row.table_name)) {
+        tablesMap.set(row.table_name, { table_name: row.table_name, columns: [] });
       }
-      tables[row.table_name].push({
+      tablesMap.get(row.table_name)!.columns.push({
         name: row.column_name,
         type: row.data_type,
-        // You can add more metadata here if you want (e.g. isPk)
       });
     });
 
-    const schema = Object.entries(tables).map(([name, cols]) => ({
-      table_name: name,
-      columns: cols
-    }));
+    const schema = Array.from(tablesMap.values());
+    const relations = relationsRes.rows;
 
-    return NextResponse.json(schema);
+    return NextResponse.json({ schema, relations });
 
   } catch (error: any) {
     console.error("Schema Fetch Error:", error);

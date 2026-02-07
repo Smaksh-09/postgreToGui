@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 export default function ConnectForm() {
   const router = useRouter();
@@ -56,6 +57,7 @@ export default function ConnectForm() {
             placeholder="postgres://user:pass@host:5432/db"
             value={connectionString}
             onChange={(e) => setConnectionString(e.target.value)}
+            disabled={loading}
             className="w-full rounded-lg border border-white/10 bg-black/50 px-4 py-3 text-sm text-white placeholder-white/20 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
           />
         </div>
@@ -69,9 +71,16 @@ export default function ConnectForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-orange-600 py-3 text-sm font-medium text-white hover:bg-orange-500 disabled:opacity-50 transition-colors"
+          className="w-full rounded-lg bg-orange-600 py-3 text-sm font-medium text-white hover:bg-orange-500 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
-          {loading ? "Connecting..." : "Visualize Schema →"}
+          {loading ? (
+            <>
+              <LoadingSpinner size={16} />
+              Connecting...
+            </>
+          ) : (
+            "Visualize Schema →"
+          )}
         </button>
       </form>
 

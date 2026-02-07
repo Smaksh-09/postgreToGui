@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Database, Clock, Zap, Terminal } from "lucide-react";
+import { Database, Clock, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import LoadingSpinner from "./LoadingSpinner";
 
 interface Connection {
   id: string;
@@ -16,6 +17,7 @@ export default function ConnectionGrid() {
   const router = useRouter();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/connections")
@@ -27,16 +29,27 @@ export default function ConnectionGrid() {
   }, []);
 
   const handleActivate = async (id: string) => {
-    // Show a loading state or sound effect here if you wanted
-    await fetch("/api/connections", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    router.push("/dashboard/visualizer");
+    setActivatingId(id);
+    try {
+      await fetch("/api/connections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      router.push("/dashboard/visualizer");
+    } finally {
+      setActivatingId(null);
+    }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto mt-12 flex items-center justify-center gap-2 text-sm text-white/40">
+        <LoadingSpinner size={16} />
+        Loading saved connections...
+      </div>
+    );
+  }
   if (connections.length === 0) return null;
 
   return (
@@ -59,6 +72,7 @@ export default function ConnectionGrid() {
               transition={{ delay: i * 0.05 }}
               onClick={() => handleActivate(conn.id)}
               className="group relative flex items-center justify-between overflow-hidden rounded-xl border border-white/5 bg-white/[0.02] p-4 text-left transition-all hover:border-orange-500/30 hover:bg-white/[0.04]"
+              disabled={activatingId === conn.id}
             >
               {/* Hover Glow Effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
@@ -84,7 +98,11 @@ export default function ConnectionGrid() {
 
               {/* Action Icon */}
               <div className="z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/20 opacity-0 transition-all group-hover:opacity-100 group-hover:bg-orange-500 group-hover:text-white">
-                <Zap className="h-3.5 w-3.5 fill-current" />
+                {activatingId === conn.id ? (
+                  <LoadingSpinner size={14} />
+                ) : (
+                  <Zap className="h-3.5 w-3.5 fill-current" />
+                )}
               </div>
             </motion.button>
           ))}

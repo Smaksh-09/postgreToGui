@@ -37,6 +37,7 @@ export default function QueryDrawer({
   const [showResults, setShowResults] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
+  const isGenerating = !!entry && entry.generatedSql === "" && !showResults;
 
   // Sync SQL when entry changes
   if (entry && entry.generatedSql !== sqlValue && !showResults) {
@@ -104,8 +105,9 @@ export default function QueryDrawer({
           {/* SQL Editor Section */}
           <div className="flex flex-col gap-3 px-6 py-4">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-wider text-white/40">
+              <span className="text-xs font-medium uppercase tracking-wider text-white/40 flex items-center gap-2">
                 Generated SQL
+                {isGenerating && <Loader2 className="h-3 w-3 animate-spin text-orange-500" />}
               </span>
               <div className="flex items-center gap-2">
                 <button

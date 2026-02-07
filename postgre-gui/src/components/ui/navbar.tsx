@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
+import LoadingSpinner from "./LoadingSpinner";
 
 
 const navItems = [
@@ -14,6 +16,8 @@ const navItems = [
 
 export default function FloatingNavbar() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const { data: session, status } = useSession();
 
   return (
     <div className="fixed top-6 inset-x-0 max-w-2xl mx-auto z-50">
@@ -50,12 +54,37 @@ export default function FloatingNavbar() {
               </AnimatePresence>
             </Link>
           ))}
-          <Link
-            href="/login"
-            className="ml-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-          >
-            Login
-          </Link>
+          <div className="ml-auto flex items-center gap-2">
+            {status === "loading" ? (
+              <div className="rounded-full border border-white/10 bg-white/10 px-4 py-2">
+                <LoadingSpinner size={14} />
+              </div>
+            ) : session ? (
+              <>
+                <span className="hidden sm:inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+                  {session.user?.name || session.user?.email || "Signed in"}
+                </span>
+                <button
+                  onClick={async () => {
+                    setIsSigningOut(true);
+                    await signOut({ callbackUrl: "/" });
+                    setIsSigningOut(false);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                  disabled={isSigningOut}
+                >
+                  {isSigningOut ? <LoadingSpinner size={14} /> : "Logout"}
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+              >
+                Login
+              </Link>
+            )}
+          </div>
         </ul>
       </nav>
     </div>

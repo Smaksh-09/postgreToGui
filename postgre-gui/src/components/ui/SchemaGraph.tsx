@@ -45,11 +45,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 };
 
 interface SchemaGraphProps {
-  tables: any[];
+  data: { tables: any[]; relations: any[] };
   onNodeClick?: (tableName: string) => void;
 }
 
-export default function SchemaGraph({ tables, onNodeClick }: SchemaGraphProps) {
+export default function SchemaGraph({ data, onNodeClick }: SchemaGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -57,9 +57,9 @@ export default function SchemaGraph({ tables, onNodeClick }: SchemaGraphProps) {
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
 
   useEffect(() => {
-    if (!tables || tables.length === 0) return;
+    if (!data || !data.tables || data.tables.length === 0) return;
 
-    const newNodes: Node<TableNodeData>[] = tables.map((table) => ({
+    const newNodes: Node<TableNodeData>[] = data.tables.map((table) => ({
       id: table.table_name,
       type: 'table',
       data: {
@@ -73,12 +73,19 @@ export default function SchemaGraph({ tables, onNodeClick }: SchemaGraphProps) {
       position: { x: 0, y: 0 },
     }));
 
-    const newEdges: Edge[] = [];
+    const newEdges: Edge[] = (data.relations || []).map((rel: any, i: number) => ({
+      id: `e-${i}`,
+      source: rel.source_table,
+      target: rel.target_table,
+      animated: true,
+      style: { stroke: '#f97316', strokeWidth: 2 },
+      type: 'smoothstep',
+    }));
 
     const layouted = getLayoutedElements(newNodes, newEdges);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tables, setNodes, setEdges]);
+  }, [data, setNodes, setEdges]);
 
   const handleNodeClick = useCallback((event: any, node: Node) => {
       if (onNodeClick) onNodeClick(node.data.label);

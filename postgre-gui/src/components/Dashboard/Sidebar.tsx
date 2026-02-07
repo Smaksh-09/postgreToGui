@@ -2,6 +2,7 @@
 
 import { Search, Table2, Database, History, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import LoadingSpinner from "../ui/LoadingSpinner";
 
 interface SidebarProps {
   tables: string[];
@@ -49,7 +50,10 @@ export default function Sidebar({
         
         <div className="space-y-0.5">
           {isLoading && (
-            <div className="px-3 py-2 text-xs text-white/30">Loading tables...</div>
+            <div className="px-3 py-2 text-xs text-white/30 flex items-center gap-2">
+              <LoadingSpinner size={12} />
+              Loading tables...
+            </div>
           )}
           {!isLoading && tables.length === 0 && (
             <div className="px-3 py-2 text-xs text-white/30">No tables found</div>
