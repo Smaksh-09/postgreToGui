@@ -1,42 +1,5 @@
-// app/api/auth/[...nextauth]/route.ts
-import NextAuth, { NextAuthOptions } from "next-auth";
-import GithubProvider from "next-auth/providers/github";
-import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
-
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    GithubProvider({
-      clientId: process.env.GITHUB_ID!,
-      clientSecret: process.env.GITHUB_SECRET!,
-    }),
-    
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-
-  ],
-  session: {
-    strategy: "jwt", // Easier for middleware & serverless
-  },
-  callbacks: {
-    async session({ session, token }) {
-      if (session.user && token.sub) {
-        // Add the User ID to the session object so we can use it in APIs
-        //@ts-ignore
-        session.user.id = token.sub;
-      }
-      return session;
-    },
-  },
-  // Ensure we can use our custom "Magma" login page later if we want
-  pages: {
-    signIn: '/login', 
-  }
-};
+import NextAuth from "next-auth";
+import { authOptions } from "@/lib/auth"; // <--- Import the named export using curly braces
 
 const handler = NextAuth(authOptions);
 

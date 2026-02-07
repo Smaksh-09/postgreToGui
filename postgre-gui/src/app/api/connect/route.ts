@@ -3,9 +3,10 @@ import { encrypt } from '@/lib/crypto';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+
 // 1. Import NextAuth tools
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from '@/lib/auth';
 
 const ConnectSchema = z.object({
   connectionString: z.string().refine(

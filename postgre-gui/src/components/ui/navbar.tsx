@@ -7,11 +7,9 @@ import Link from "next/link";
 
 const navItems = [
   { name: "Home", link: "/" },
-  { name: "Private Key", link: "/private-key" }, 
   { name: "Product", link: "/product" },
   { name: "Solution", link: "/solution" },
   { name: "Pricing", link: "/pricing" },
-  { name: "Community", link: "/community" },
 ];
 
 export default function FloatingNavbar() {
@@ -27,7 +25,7 @@ export default function FloatingNavbar() {
           shadow-[0px_2px_3px_-1px_rgba(0,0,0,0.1),0px_1px_0px_0px_rgba(25,28,33,0.02),0px_0px_0px_1px_rgba(25,28,33,0.08)]
         "
       >
-        <ul className="flex flex-row items-center gap-2 w-full justify-between">
+        <ul className="flex flex-row items-center gap-2 w-full">
           {navItems.map((item, idx) => (
             <Link
               key={item.name}
@@ -52,6 +50,12 @@ export default function FloatingNavbar() {
               </AnimatePresence>
             </Link>
           ))}
+          <Link
+            href="/login"
+            className="ml-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+          >
+            Login
+          </Link>
         </ul>
       </nav>
     </div>

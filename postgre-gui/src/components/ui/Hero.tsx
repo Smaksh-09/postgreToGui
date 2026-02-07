@@ -74,7 +74,7 @@ export default function Hero() {
             text-base font-medium text-white transition-all duration-300
             hover:bg-white/10 hover:scale-105 hover:border-orange-500/50 
             hover:shadow-[0_0_30px_rgba(249,115,22,0.3)]
-          " onClick={() => router.push('/dashboard/visualizer')}>
+          " onClick={() => router.push('/dashboard')}>
             Connect Database
             <span className="transition-transform duration-200 group-hover:translate-x-1">
               -&gt;

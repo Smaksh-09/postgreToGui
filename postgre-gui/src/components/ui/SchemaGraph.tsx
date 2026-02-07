@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Background,
   Edge,
@@ -12,70 +12,18 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import dagre from 'dagre';
-import TableNode from './TableNode';
-
-// --- MOCK DATA FOR VIBE CHECK ---
-// Eventually this comes from your backend /api/schema
-const INITIAL_NODES_DATA = [
-  { 
-    id: 'users', 
-    type: 'table', 
-    data: { 
-      label: 'users', 
-      columns: [
-        { name: 'id', type: 'uuid', isPk: true },
-        { name: 'email', type: 'varchar' },
-        { name: 'full_name', type: 'varchar' },
-        { name: 'created_at', type: 'timestamp' }
-      ] 
-    },
-    position: { x: 0, y: 0 } 
-  },
-  { 
-    id: 'posts', 
-    type: 'table', 
-    data: { 
-      label: 'posts', 
-      columns: [
-        { name: 'id', type: 'uuid', isPk: true },
-        { name: 'user_id', type: 'uuid' }, // FK
-        { name: 'title', type: 'text' },
-        { name: 'published', type: 'boolean' }
-      ] 
-    },
-    position: { x: 0, y: 0 } 
-  },
-  { 
-    id: 'comments', 
-    type: 'table', 
-    data: { 
-      label: 'comments', 
-      columns: [
-        { name: 'id', type: 'uuid', isPk: true },
-        { name: 'post_id', type: 'uuid' }, // FK
-        { name: 'author_id', type: 'uuid' }, // FK
-        { name: 'content', type: 'text' }
-      ] 
-    },
-    position: { x: 0, y: 0 } 
-  }
-];
-
-const INITIAL_EDGES: Edge[] = [
-  { id: 'e1-2', source: 'users', target: 'posts', animated: true, style: { stroke: '#f97316' } }, // Orange edge
-  { id: 'e2-3', source: 'posts', target: 'comments', animated: true, style: { stroke: '#f97316' } },
-  { id: 'e1-3', source: 'users', target: 'comments', animated: true, style: { stroke: '#f97316', strokeDasharray: '5,5' } },
-];
+import TableNode, { TableNodeData } from './TableNode';
 
 // --- AUTO LAYOUT LOGIC ---
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
+  if (nodes.length === 0) return { nodes, edges };
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setGraph({ rankdir: 'LR' }); // Left to Right layout
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
   nodes.forEach((node) => {
     // We approximate width/height for the layout engine
-    dagreGraph.setNode(node.id, { width: 220, height: 200 });
+    dagreGraph.setNode(node.id, { width: 240, height: 300 });
   });
 
   edges.forEach((edge) => {
@@ -88,25 +36,49 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
     const nodeWithPosition = dagreGraph.node(node.id);
     if (!nodeWithPosition) return;
     node.position = {
-      x: nodeWithPosition.x - 110, // Center offset
-      y: nodeWithPosition.y - 100,
+      x: nodeWithPosition.x - 120,
+      y: nodeWithPosition.y - 150,
     };
   });
 
   return { nodes, edges };
 };
 
-const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-  INITIAL_NODES_DATA,
-  INITIAL_EDGES
-);
+interface SchemaGraphProps {
+  tables: any[];
+  onNodeClick?: (tableName: string) => void;
+}
 
-export default function SchemaGraph({ onNodeClick }: { onNodeClick?: (tableName: string) => void }) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(layoutedEdges);
+export default function SchemaGraph({ tables, onNodeClick }: SchemaGraphProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Register our custom "Cyberpunk Node"
   const nodeTypes = useMemo(() => ({ table: TableNode }), []);
+
+  useEffect(() => {
+    if (!tables || tables.length === 0) return;
+
+    const newNodes: Node<TableNodeData>[] = tables.map((table) => ({
+      id: table.table_name,
+      type: 'table',
+      data: {
+        label: table.table_name,
+        columns: (table.columns || []).map((col: any) => ({
+          name: col.name,
+          type: col.type,
+          isPk: false,
+        })),
+      },
+      position: { x: 0, y: 0 },
+    }));
+
+    const newEdges: Edge[] = [];
+
+    const layouted = getLayoutedElements(newNodes, newEdges);
+    setNodes(layouted.nodes);
+    setEdges(layouted.edges);
+  }, [tables, setNodes, setEdges]);
 
   const handleNodeClick = useCallback((event: any, node: Node) => {
       if (onNodeClick) onNodeClick(node.data.label);
@@ -123,7 +95,7 @@ export default function SchemaGraph({ onNodeClick }: { onNodeClick?: (tableName:
         nodeTypes={nodeTypes}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
-        minZoom={0.5}
+        minZoom={0.1}
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }} // Hide the ReactFlow watermark (requires pro or just use this for clean ui)
       >

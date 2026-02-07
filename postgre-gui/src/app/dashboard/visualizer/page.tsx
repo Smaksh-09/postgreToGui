@@ -5,6 +5,7 @@ import { Sparkles, Play, Share2, Maximize2 } from "lucide-react";
 import { motion } from "framer-motion";
 import ResultsTable from "../../../components/ui/ResultsTable";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import SchemaGraph from "../../../components/ui/SchemaGraph";
 import QueryDrawer, {
   QueryDrawerEntry,
@@ -12,7 +13,9 @@ import QueryDrawer, {
 import QueryHistory from "../../../components/ui/QueryHistory";
 
 export default function VisualizerPage() {
-  const [tables, setTables] = useState<string[]>([]);
+  const router = useRouter();
+  const [schemaData, setSchemaData] = useState<any[]>([]);
+  const [tableNames, setTableNames] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState("");
   const [loading, setLoading] = useState(true);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -23,19 +26,23 @@ export default function VisualizerPage() {
 
   useEffect(() => {
     async function fetchSchema() {
-      // TODO: Replace with real schema fetch
-      setTables([
-        "users",
-        "orders",
-        "products",
-        "transactions",
-        "analytics_events",
-        "schema_migrations",
-      ]);
-      setLoading(false);
+      try {
+        const res = await fetch("/api/schema");
+        if (res.status === 401) return router.push("/login");
+        if (res.status === 404) return router.push("/dashboard");
+        if (!res.ok) throw new Error("Failed to fetch schema");
+
+        const data = await res.json();
+        setSchemaData(data);
+        setTableNames(data.map((t: any) => t.table_name));
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchSchema();
-  }, []);
+  }, [router]);
 
   const handleInputKeyDown = async (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -54,7 +61,7 @@ export default function VisualizerPage() {
         // 2. Prepare Context
         const schemaContext = activeTable
           ? { tableName: activeTable }
-          : { tables };
+          : { tables: tableNames };
 
         // 3. Call Your API
         const res = await fetch("/api/query/ai", {
@@ -88,7 +95,7 @@ export default function VisualizerPage() {
   return (
     <div className="flex h-screen w-full bg-midnight-950 text-white overflow-hidden">
       <Sidebar
-        tables={tables}
+        tables={tableNames}
         activeTable={activeTable}
         onSelectTable={setActiveTable}
         isLoading={loading}
@@ -138,7 +145,10 @@ export default function VisualizerPage() {
             </div>
           ) : (
             <div className="absolute inset-0 z-10">
-              <SchemaGraph onNodeClick={(name) => setActiveTable(name)} />
+              <SchemaGraph
+                tables={schemaData}
+                onNodeClick={(name) => setActiveTable(name)}
+              />
             </div>
           )}
 
