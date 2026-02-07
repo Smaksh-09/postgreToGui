@@ -1,104 +1,123 @@
 import { NextResponse } from 'next/server';
 import { decrypt } from '@/lib/crypto';
-import { getDbClient, closeDbClient } from '@/lib/db-connect';
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
+import { Client } from 'pg'; // Standard Postgres Client
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
-  // 1. Parse Input
-  const { sql, connectionId } = await req.json();
+  const { sql } = await req.json();
 
-  // 2. Determine Source of Connection String
-  // STRATEGY: If connectionId exists, check DB (User). If not, check Cookie (Guest).
   let encryptedString: string | undefined;
+  let connectionId: string | undefined;
 
-  if (connectionId) {
-    // A. Logged In User Mode
-    const savedConnection = await prisma.connection.findUnique({
-      where: { id: connectionId },
-      select: { encryptedString: true }
+  // ---------------------------------------------------------
+  // 1. DETERMINE CONNECTION (The Patch)
+  // ---------------------------------------------------------
+  
+  // A. Check Session (Logged In User)
+  const session = await getServerSession(authOptions);
+  
+  if (session?.user?.email) {
+    // Find the user's most recent active connection
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { connections: { orderBy: { createdAt: 'desc' }, take: 1 } }
     });
     
-    if (savedConnection) {
-      encryptedString = savedConnection.encryptedString;
+    if (user?.connections[0]) {
+      encryptedString = user.connections[0].encryptedString;
+      connectionId = user.connections[0].id;
     }
-  } 
-  
-  // B. Guest Mode Fallback
+  }
+
+  // B. Guest Mode Fallback (If not found above)
   if (!encryptedString) {
     const cookieStore = await cookies();
     encryptedString = cookieStore.get('db_session_guest')?.value;
   }
 
-  // If we still don't have a string, they are unauthorized
+  // If still no string, they aren't connected
   if (!encryptedString) {
-    return NextResponse.json({ error: "Unauthorized: No active connection." }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized: No active connection found." }, { status: 401 });
   }
 
-  // 3. Security Guardrails (Regex Check)
+  // ---------------------------------------------------------
+  // 2. SECURITY GUARDRAILS (Your excellent code)
+  // ---------------------------------------------------------
   const upperSql = sql.toUpperCase();
   const forbiddenKeywords = ['DROP ', 'DELETE ', 'INSERT ', 'UPDATE ', 'ALTER ', 'TRUNCATE ', 'GRANT ', 'REVOKE '];
 
   if (forbiddenKeywords.some(keyword => upperSql.includes(keyword))) {
     return NextResponse.json(
-      { error: "Security Alert: destructive actions are disabled." }, 
+      { error: "Security Alert: Destructive actions are disabled in this demo." }, 
       { status: 403 }
     );
   }
 
+  // ---------------------------------------------------------
+  // 3. EXECUTE QUERY
+  // ---------------------------------------------------------
   const startTime = Date.now();
-  let client; // Declare outside try/catch so we can close it in 'finally'
+  let client: Client | null = null;
   
   try {
     const connectionString = await decrypt(encryptedString);
-    client = await getDbClient(connectionString);
+    
+    // Connect to the User's Database
+    client = new Client({
+      connectionString,
+      ssl: { rejectUnauthorized: false } // Necessary for Neon/Supabase/Cloud DBs
+    });
 
-    // 4. TIMEOUT PROTECTION (Vital!)
-    // If a query takes > 5 seconds, kill it to save resources
+    await client.connect();
+
+    // TIMEOUT PROTECTION: Kill query if it takes > 5 seconds
     await client.query("SET statement_timeout = 5000");
 
-    // 5. Execute
+    // Run the actual SQL
     const result = await client.query(sql);
 
-    // 6. Log Success (Fire & Forget)
+    // LOGGING (Optional - Keep if you have a QueryLog model)
     if (connectionId) {
-      prisma.queryLog.create({
-        data: {
-          sql: sql,
-          success: true,
-          durationMs: Date.now() - startTime,
-          connectionId: connectionId
-        }
-      }).catch(err => console.error("Failed to log query", err));
+        // We wrap this in a fire-and-forget catch so it doesn't block the UI
+        prisma.queryLog?.create({
+            data: {
+                sql: sql,
+                success: true,
+                durationMs: Date.now() - startTime,
+                connectionId: connectionId
+            }
+        }).catch(err => console.log("Logging skipped (Model might not exist)"));
     }
 
-    // 7. Return Rows AND Fields (Column Names)
-    // We map fields to simple names so the frontend table knows what columns to show
+    // Return Data + Fields
     return NextResponse.json({ 
       rows: result.rows,
-      fields: result.fields.map((f: any) => f.name) 
+      fields: result.fields.map((f: any) => f.name),
+      rowCount: result.rowCount
     });
 
   } catch (error: any) {
     // Log Failure
     if (connectionId) {
-       prisma.queryLog.create({
-        data: {
-          sql: sql,
-          success: false,
-          durationMs: Date.now() - startTime,
-          connectionId: connectionId
-        }
-      }).catch(e => console.error(e));
+        prisma.queryLog?.create({
+            data: {
+                sql: sql,
+                success: false,
+                durationMs: Date.now() - startTime,
+                connectionId: connectionId
+            }
+        }).catch(err => console.log("Logging skipped"));
     }
     
-    // Return the actual DB error message so the user knows what they did wrong
     return NextResponse.json({ error: error.message || "Query Failed" }, { status: 400 });
 
   } finally {
-    // 8. CRITICAL: CLOSE THE CONNECTION
+    // CRITICAL: Close connection
     if (client) {
-      await closeDbClient(client);
+      await client.end();
     }
   }
 }

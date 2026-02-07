@@ -1,59 +1,78 @@
-import { NextResponse } from 'next/server';
-import { encrypt } from '@/lib/crypto';
-import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
-
-
-// 1. Import NextAuth tools
+import { NextResponse } from "next/server";
+import { encrypt } from "@/lib/crypto";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 import { getServerSession } from "next-auth";
-import { authOptions } from '@/lib/auth';
+import { authOptions } from "@/lib/auth";
+import { Client } from "pg";
 
 const ConnectSchema = z.object({
   connectionString: z.string().refine(
-    (s) => s.startsWith('postgres://') || s.startsWith('postgresql://'),
+    (s) => s.startsWith("postgres://") || s.startsWith("postgresql://"),
     "Must be a valid PostgreSQL connection string"
   ),
-  name: z.string().optional(),
 });
+
+async function testConnection(connectionString: string) {
+  const client = new Client({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+  });
+  await client.connect();
+  await client.end();
+}
 
 export async function POST(req: Request) {
   try {
-    // 2. GET USER SECURELY (NextAuth way)
     const session = await getServerSession(authOptions);
-    //@ts-ignore
-    const userId = session?.user?.id; // This comes from our callback in step 3
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = await req.json().catch(() => null);
     if (!body) return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
 
-    const { connectionString, name } = ConnectSchema.parse(body);
+    const { connectionString } = ConnectSchema.parse(body);
 
-    // ... (Validation Logic & DB Ping stays the same) ...
+    // Test the connection
+    await testConnection(connectionString);
 
-    const encryptedString = await encrypt(connectionString);
+    let dbName = "Untitled Database";
+    let provider = "Postgres";
 
-    // 3. PERSIST (If User is logged in)
-    if (userId) {
-      try {
-        const savedConnection = await prisma.connection.create({
-          data: {
-            name: name || "Untitled Database",
-            encryptedString: encryptedString,
-            userId: userId, 
-          },
-        });
-        return NextResponse.json({ status: "connected", id: savedConnection.id });
-      } catch (e) {
-        return NextResponse.json({ error: "Failed to save connection" }, { status: 500 });
+    try {
+      const url = new URL(connectionString);
+      if (url.pathname.length > 1) {
+        dbName = url.pathname.slice(1);
       }
+
+      const host = url.hostname;
+      if (host.includes("aws")) provider = "AWS RDS";
+      else if (host.includes("supabase")) provider = "Supabase";
+      else if (host.includes("neon")) provider = "Neon Tech";
+      else if (host.includes("localhost") || host.includes("127.0.0.1")) {
+        provider = "Localhost";
+      }
+    } catch (e) {
+      console.log("Could not parse DB name, using default");
     }
 
-    // ... (Guest Mode Cookie Logic stays the same) ...
-    
-    return NextResponse.json({ status: "connected", mode: "guest" });
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const encryptedString = await encrypt(connectionString);
+    const connection = await prisma.connection.create({
+      data: {
+        name: dbName,
+        provider,
+        encryptedString,
+        userId: user.id,
+      } as any,
+    });
+
+    return NextResponse.json({ status: "connected", connection });
 
   } catch (error) {
-    // ... Error handling
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }
 }

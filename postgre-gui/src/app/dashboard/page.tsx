@@ -1,4 +1,5 @@
 import ConnectForm from "../../components/Dashboard/ConnectionForm";
+import ConnectionGrid from "../../components/ui/ConnectionGrid";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
@@ -27,6 +28,11 @@ export default async function DashboardPage() {
 
         {/* The Form */}
         <ConnectForm />
+
+        {/* Saved Connections */}
+        <div className="w-full max-w-5xl">
+          <ConnectionGrid />
+        </div>
         
       </div>
     </main>

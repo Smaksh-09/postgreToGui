@@ -126,6 +126,7 @@ model Connection {
 
   name            String     // e.g. "My Prod DB"
 
+  provider        String     @default("Postgres")
 
   encryptedString String
 
