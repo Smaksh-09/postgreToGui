@@ -5,10 +5,11 @@ import { motion } from "framer-motion";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 interface ResultsTableProps {
-  activeTable: string;
+  activeTable?: string;
+  sqlQuery?: string;
 }
 
-export default function ResultsTable({ activeTable }: ResultsTableProps) {
+export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProps) {
   const [data, setData] = useState<any[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -16,19 +17,20 @@ export default function ResultsTable({ activeTable }: ResultsTableProps) {
 
   // Function to fetch data
   const fetchData = async () => {
-    if (!activeTable) return;
+    if (!activeTable && !sqlQuery) return;
     
     setLoading(true);
     setError(null);
     setData([]);
 
     try {
+      const sql = sqlQuery || `SELECT * FROM "${activeTable}" LIMIT 100`;
       const res = await fetch("/api/query/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Construct a safe query
         body: JSON.stringify({ 
-          sql: `SELECT * FROM "${activeTable}" LIMIT 100` 
+          sql
         }),
       });
 
@@ -51,13 +53,17 @@ export default function ResultsTable({ activeTable }: ResultsTableProps) {
   // Fetch whenever the active table changes
   useEffect(() => {
     fetchData();
-  }, [activeTable]);
+  }, [activeTable, sqlQuery]);
 
   if (loading) {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/40">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
-        <p className="text-sm">Fetching rows from <span className="text-white">{activeTable}</span>...</p>
+        <p className="text-sm">
+          {sqlQuery
+            ? "Running query..."
+            : `Fetching rows from ${activeTable}`}
+        </p>
       </div>
     );
   }

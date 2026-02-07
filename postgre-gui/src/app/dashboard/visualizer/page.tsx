@@ -1,7 +1,7 @@
 "use client";
 
 import Sidebar from "../../../components/Dashboard/Sidebar";
-import { Sparkles, Play, Maximize2 } from "lucide-react";
+import { Sparkles, Play } from "lucide-react";
 import { motion } from "framer-motion";
 import ResultsTable from "../../../components/ui/ResultsTable";
 import { useEffect, useState } from "react";
@@ -10,7 +10,6 @@ import SchemaGraph from "../../../components/ui/SchemaGraph";
 import QueryDrawer, {
   QueryDrawerEntry,
 } from "../../../components/ui/QueryDrawer";
-import QueryHistory from "../../../components/ui/QueryHistory";
 import LoadingSpinner from "../../../components/ui/LoadingSpinner";
 
 export default function VisualizerPage() {
@@ -22,11 +21,10 @@ export default function VisualizerPage() {
   const [tableNames, setTableNames] = useState<string[]>([]);
   const [activeTable, setActiveTable] = useState("");
   const [loading, setLoading] = useState(true);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [drawerEntry, setDrawerEntry] = useState<QueryDrawerEntry | null>(
-    null
-  );
-  const [inputValue, setInputValue] = useState("");
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerEntry, setDrawerEntry] = useState<QueryDrawerEntry | null>(null);
+  const [promptValue, setPromptValue] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     async function fetchSchema() {
@@ -50,51 +48,34 @@ export default function VisualizerPage() {
     fetchSchema();
   }, [router]);
 
-  const handleInputKeyDown = async (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === "Enter" && inputValue.trim()) {
-      const question = inputValue.trim();
-      setInputValue("");
+  const handleGenerate = async () => {
+    if (!promptValue.trim()) return;
+    const question = promptValue.trim();
+    setIsGenerating(true);
 
-      // 1. Show Drawer immediately (Loading State)
-      setDrawerEntry({
-        question,
-        generatedSql: "",
+    setDrawerEntry({ question, generatedSql: "" });
+    setIsDrawerOpen(true);
+
+    try {
+      const res = await fetch("/api/query/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: question }),
       });
 
-      try {
-        // 2. Prepare Context
-        const schemaContext = activeTable
-          ? { tableName: activeTable }
-          : { tables: tableNames };
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
 
-        // 3. Call Your API
-        const res = await fetch("/api/query/ai", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: question,
-            schemaContext,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error);
-
-        // 4. Update Drawer with Real SQL
-        setDrawerEntry((prev) =>
-          prev ? { ...prev, generatedSql: data.sql } : null
-        );
-      } catch (error) {
-        console.error("AI Gen Failed:", error);
-        setDrawerEntry((prev) =>
-          prev
-            ? { ...prev, generatedSql: "-- Error: Could not generate SQL." }
-            : null
-        );
-      }
+      setDrawerEntry({ question, generatedSql: data.sql });
+    } catch (err) {
+      console.error(err);
+      setDrawerEntry({
+        question,
+        generatedSql: "-- Error generating query. Please try again.",
+      });
+    } finally {
+      setIsGenerating(false);
+      setPromptValue("");
     }
   };
 
@@ -105,7 +86,6 @@ export default function VisualizerPage() {
         activeTable={activeTable}
         onSelectTable={setActiveTable}
         isLoading={loading}
-        onOpenHistory={() => setIsHistoryOpen(true)}
       />
       
       {/* Main Content Area */}
@@ -152,7 +132,7 @@ export default function VisualizerPage() {
           
           {/* Main View: Graph vs Table */}
           {activeTable ? (
-            <div className="absolute inset-0 z-20 bg-midnight-950 pb-16">
+            <div className="absolute inset-0 z-20 bg-midnight-950 pb-20">
               <ResultsTable activeTable={activeTable} />
             </div>
           ) : (
@@ -171,45 +151,36 @@ export default function VisualizerPage() {
               animate={{ y: 0, opacity: 1 }}
               className="group relative flex items-center gap-2 rounded-xl border border-white/10 bg-[#0c0c0c]/90 p-2 shadow-2xl backdrop-blur-xl ring-1 ring-white/5 focus-within:ring-orange-500/50 transition-all"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-red-600">
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-orange-500">
+                <Sparkles className="h-4 w-4" />
               </div>
               <input 
                 type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                placeholder={`Ask your ${activeTable || "database"}... (Press Enter)`}
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                placeholder="Ask your data (e.g., 'Show top 5 users by revenue')..."
                 className="flex-1 bg-transparent px-2 text-sm text-white placeholder-white/30 focus:outline-none"
               />
-              <div className="flex items-center gap-1 border-l border-white/10 pl-2">
-                 <kbd className="hidden rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/50 sm:inline-block">
-                   ↵
-                 </kbd>
-                 <button className="rounded-lg p-1.5 hover:bg-white/10 text-white/40 hover:text-white transition-colors">
-                    <Maximize2 className="h-4 w-4" />
-                 </button>
-              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !promptValue}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/50 hover:bg-orange-500 hover:text-white transition-all disabled:opacity-50"
+              >
+                {isGenerating ? (
+                  <LoadingSpinner size={14} />
+                ) : (
+                  <div className="text-[10px] font-bold">↵</div>
+                )}
+              </button>
             </motion.div>
           </div>
 
           <QueryDrawer
-            isOpen={!!drawerEntry}
-            onClose={() => setDrawerEntry(null)}
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
             entry={drawerEntry}
             onRun={(sql) => console.log("Running SQL:", sql)}
-          />
-
-          <QueryHistory
-            isOpen={isHistoryOpen}
-            onClose={() => setIsHistoryOpen(false)}
-            onSelect={(historyItem) => {
-              setIsHistoryOpen(false);
-              setDrawerEntry({
-                question: historyItem.question,
-                generatedSql: historyItem.sql,
-              });
-            }}
           />
         </div>
       </main>

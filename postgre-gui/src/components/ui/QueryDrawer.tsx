@@ -159,7 +159,7 @@ export default function QueryDrawer({
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
               <div className="flex-1 overflow-auto" style={{ maxHeight: "30vh" }}>
-                <ResultsTable activeTable={entry.question} />
+                <ResultsTable sqlQuery={sqlValue} />
               </div>
             </div>
           )}
