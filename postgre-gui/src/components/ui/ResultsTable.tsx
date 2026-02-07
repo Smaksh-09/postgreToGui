@@ -28,10 +28,7 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
       const res = await fetch("/api/query/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // Construct a safe query
-        body: JSON.stringify({ 
-          sql
-        }),
+        body: JSON.stringify({ sql }),
       });
 
       const json = await res.json();
@@ -50,19 +47,16 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
     }
   };
 
-  // Fetch whenever the active table changes
   useEffect(() => {
     fetchData();
   }, [activeTable, sqlQuery]);
 
   if (loading) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/40">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/40 min-h-[200px]">
         <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         <p className="text-sm">
-          {sqlQuery
-            ? "Running query..."
-            : `Fetching rows from ${activeTable}`}
+          {sqlQuery ? "Running query..." : `Fetching rows from ${activeTable}`}
         </p>
       </div>
     );
@@ -70,17 +64,23 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
 
   if (error) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 text-white/50">
-        <div className="rounded-full bg-red-500/10 p-4">
+      // FIX APPLIED HERE:
+      // 1. Changed 'h-full' to 'min-h-full' (allows scrolling if content is tall)
+      // 2. Added 'p-6' (padding prevents text hitting edges)
+      // 3. Removed 'w-full' (let flex handle width naturally)
+      <div className="flex min-h-full w-full flex-col items-center justify-center gap-4 p-6 text-white/50">
+        <div className="shrink-0 rounded-full bg-red-500/10 p-4">
           <AlertCircle className="h-8 w-8 text-red-500" />
         </div>
         <div className="text-center">
           <p className="font-medium text-white">Error loading table</p>
-          <p className="mt-1 max-w-md text-sm text-red-400">{error}</p>
+          <p className="mt-2 max-w-md text-sm text-red-400 break-words leading-relaxed">
+            {error}
+          </p>
         </div>
         <button 
           onClick={fetchData}
-          className="flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+          className="shrink-0 flex items-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 transition-colors"
         >
           <RefreshCw className="h-4 w-4" /> Try Again
         </button>
@@ -90,7 +90,7 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
 
   if (data.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-white/30">
+      <div className="flex h-full w-full items-center justify-center text-white/30 min-h-[100px]">
         <p>Table is empty or no data returned.</p>
       </div>
     );
@@ -99,10 +99,10 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
   return (
     <div className="h-full w-full overflow-auto bg-[#0a0a0a]">
       <table className="w-full border-collapse text-left text-sm">
-        <thead className="sticky top-0 bg-[#111] text-xs uppercase text-white/40">
+        <thead className="sticky top-0 z-10 bg-[#111] text-xs uppercase text-white/40 shadow-sm">
           <tr>
             {columns.map((col) => (
-              <th key={col} className="border-b border-white/10 px-6 py-3 font-medium">
+              <th key={col} className="border-b border-white/10 px-6 py-3 font-medium whitespace-nowrap">
                 {col}
               </th>
             ))}
@@ -119,7 +119,6 @@ export default function ResultsTable({ activeTable, sqlQuery }: ResultsTableProp
             >
               {columns.map((col) => (
                 <td key={`${i}-${col}`} className="whitespace-nowrap px-6 py-3 font-mono text-xs">
-                  {/* Handle Objects/Dates for display */}
                   {typeof row[col] === 'object' && row[col] !== null
                     ? JSON.stringify(row[col]) 
                     : String(row[col] ?? 'NULL')}

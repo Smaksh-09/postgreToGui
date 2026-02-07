@@ -75,6 +75,8 @@ export async function POST(req: Request) {
       2. Do not include explanations.
       3. Use ILIKE for text searching if ambiguous.
       4. Always limit results to 100 if no limit is specified.
+      5. Pay close attention to the column names provided in the schema. Do not hallucinate 'userId' if the schema says 'user_id'.
+      6. Double-check casing. PostgreSQL is case-sensitive for quoted identifiers.
     `;
 
     // 5. Generate

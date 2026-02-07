@@ -3,6 +3,7 @@
 import { Search, Table2, Database, History, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import Link from "next/link";
 
 interface SidebarProps {
   tables: string[];
@@ -24,10 +25,10 @@ export default function Sidebar({
       
       {/* Header */}
       <div className="flex h-16 items-center border-b border-white/10 px-6">
-        <div className="flex items-center gap-2 text-orange-500">
+        <Link href="/" className="flex items-center gap-2 text-orange-500">
           <Database className="h-5 w-5" />
           <span className="font-bold tracking-tight text-white">PRISM</span>
-        </div>
+        </Link>
       </div>
 
       {/* Search */}

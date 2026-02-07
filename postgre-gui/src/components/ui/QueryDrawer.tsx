@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -37,6 +37,10 @@ export default function QueryDrawer({
   const [showResults, setShowResults] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [hasResults, setHasResults] = useState(false);
+  const [drawerHeight, setDrawerHeight] = useState("60vh");
+  const dragStartYRef = useRef(0);
+  const dragStartHeightRef = useRef(0);
   const isGenerating = !!entry && entry.generatedSql === "" && !showResults;
 
   // Sync SQL when entry changes
@@ -50,6 +54,7 @@ export default function QueryDrawer({
     setTimeout(() => {
       setIsRunning(false);
       setShowResults(true);
+      setHasResults(true);
       if (onRun) onRun(sqlValue);
     }, 800);
   };
@@ -62,7 +67,31 @@ export default function QueryDrawer({
 
   const handleClose = () => {
     setShowResults(false);
+    setHasResults(false);
     onClose();
+  };
+
+  const handleResizeStart = (e: React.PointerEvent) => {
+    dragStartYRef.current = e.clientY;
+    dragStartHeightRef.current = window.innerHeight * (parseFloat(drawerHeight) / 100);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const delta = dragStartYRef.current - moveEvent.clientY;
+      const nextHeight = Math.min(
+        window.innerHeight * 0.75,
+        Math.max(window.innerHeight * 0.35, dragStartHeightRef.current + delta)
+      );
+      setDrawerHeight(`${(nextHeight / window.innerHeight) * 100}vh`);
+    };
+
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   };
 
   return (
@@ -74,10 +103,13 @@ export default function QueryDrawer({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 30, stiffness: 300 }}
-          style={{ maxHeight: "75vh" }}
+          style={{ height: drawerHeight, maxHeight: "75vh" }}
         >
           {/* Drag Handle */}
-          <div className="flex items-center justify-center pt-2 pb-1">
+          <div
+            className="flex items-center justify-center pt-2 pb-2 cursor-ns-resize"
+            onPointerDown={handleResizeStart}
+          >
             <div className="h-1 w-10 rounded-full bg-white/20" />
           </div>
 
@@ -136,7 +168,7 @@ export default function QueryDrawer({
               </div>
             </div>
 
-            <div className="resize-y overflow-auto min-h-[30vh] max-h-[40vh] rounded-lg border border-white/10 bg-[#0a0a0a]">
+            <div className="overflow-auto min-h-[30vh] max-h-[40vh] rounded-lg border border-white/10 bg-[#0a0a0a]">
               <SqlEditor
                 value={sqlValue}
                 onChange={setSqlValue}
@@ -147,20 +179,26 @@ export default function QueryDrawer({
           </div>
 
           {/* Results Section (collapsible) */}
-          {showResults && (
+          {hasResults && (
             <div className="flex flex-1 flex-col overflow-hidden border-t border-white/10">
               <button
-                onClick={() => setShowResults(!showResults)}
+                onClick={() => setShowResults((prev) => !prev)}
                 className="flex items-center justify-between px-6 py-2 text-xs text-white/40 hover:text-white/60 transition-colors"
               >
                 <span className="font-medium uppercase tracking-wider">
                   Results
                 </span>
-                <ChevronDown className="h-3.5 w-3.5" />
+                {showResults ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
               </button>
-              <div className="flex-1 overflow-auto" style={{ maxHeight: "30vh" }}>
-                <ResultsTable sqlQuery={sqlValue} />
-              </div>
+              {showResults && (
+                <div className="flex-1 overflow-auto" style={{ maxHeight: "30vh" }}>
+                  <ResultsTable sqlQuery={sqlValue} />
+                </div>
+              )}
             </div>
           )}
         </motion.div>

@@ -26,3 +26,40 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+/* GLOBAL DARK SCROLLBAR THEME */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a; /* Matches your bg-midnight-950 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626; /* Dark Grey thumb */
+  border-radius: 5px;
+  border: 2px solid #0a0a0a; /* Creates a nice "padding" effect around the thumb */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f97316; /* Orange on hover (matches your brand) */
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #262626 #0a0a0a;
+}
