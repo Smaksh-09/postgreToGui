@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import FloatingNavbar from "./navbar";
 
-const hiddenPrefixes = ["/dashboard/visualizer"];
+const hiddenPrefixes = ["/dashboard"];
 
 export default function NavbarGate() {
   const pathname = usePathname();
