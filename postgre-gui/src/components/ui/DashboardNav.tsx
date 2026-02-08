@@ -3,8 +3,14 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { ChevronLeft, LogOut, Hexagon } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export default function DashboardNav() {
+  const pathname = usePathname();
+  if (pathname !== "/dashboard") {
+    return null;
+  }
+
   return (
     <>
       {/* TOP LEFT: Escape Hatch (Back to Landing) */}

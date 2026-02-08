@@ -11,6 +11,7 @@ import QueryDrawer, {
   QueryDrawerEntry,
 } from "../../../components/ui/QueryDrawer";
 import LoadingSpinner from "../../../components/ui/LoadingSpinner";
+import QueryHistory from "../../../components/ui/QueryHistory";
 
 export default function VisualizerPage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function VisualizerPage() {
   const [drawerEntry, setDrawerEntry] = useState<QueryDrawerEntry | null>(null);
   const [promptValue, setPromptValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
     async function fetchSchema() {
@@ -79,6 +81,14 @@ export default function VisualizerPage() {
     }
   };
 
+  const handleHistorySelect = (sql: string) => {
+    setDrawerEntry({
+      question: "Restored from history",
+      generatedSql: sql,
+    });
+    setIsDrawerOpen(true);
+  };
+
   return (
     <div className="flex h-screen w-full bg-midnight-950 text-white overflow-hidden">
       <Sidebar
@@ -86,6 +96,7 @@ export default function VisualizerPage() {
         activeTable={activeTable}
         onSelectTable={setActiveTable}
         isLoading={loading}
+        onOpenHistory={() => setIsHistoryOpen(true)}
       />
       
       {/* Main Content Area */}
@@ -181,6 +192,12 @@ export default function VisualizerPage() {
             onClose={() => setIsDrawerOpen(false)}
             entry={drawerEntry}
             onRun={(sql) => console.log("Running SQL:", sql)}
+          />
+
+          <QueryHistory
+            isOpen={isHistoryOpen}
+            onClose={() => setIsHistoryOpen(false)}
+            onSelectQuery={handleHistorySelect}
           />
         </div>
       </main>
