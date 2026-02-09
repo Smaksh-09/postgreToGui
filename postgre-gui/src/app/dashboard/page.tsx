@@ -7,12 +7,12 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-midnight-950 px-4 relative overflow-hidden">
+    <main className="relative min-h-screen w-full overflow-y-auto bg-midnight-950 px-4 py-16 md:flex md:items-center md:justify-center md:overflow-hidden md:py-0">
       
       {/* Background Ambient Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-orange-500/10 blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 w-full">
+      <div className="relative z-10 flex flex-col items-center gap-8 w-full pt-8 md:pt-0">
         
         {/* Welcome Message */}
         <div className="text-center">

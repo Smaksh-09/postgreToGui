@@ -4,15 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import LoadingSpinner from "../ui/LoadingSpinner";
+import { useSession } from "next-auth/react";
 
 export default function ConnectForm() {
   const router = useRouter();
+  const { status } = useSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [connectionString, setConnectionString] = useState("");
 
   async function handleConnect(e: React.FormEvent) {
     e.preventDefault();
+    if (status !== "authenticated") {
+      router.push("/login");
+      return;
+    }
     setLoading(true);
     setError("");
 
