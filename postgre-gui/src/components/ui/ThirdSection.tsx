@@ -19,9 +19,9 @@ export default function ThirdSection() {
           transition={{ duration: 1, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.4 }}
         >
-          {/* Your Card Component */}
+          {/* Dashboard Preview Card */}
           <motion.div
-            className="relative h-[360px] w-full rounded-2xl border border-white/10 bg-[#0c0c0c] shadow-[0_40px_120px_rgba(0,0,0,0.7)]"
+            className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c] shadow-[0_40px_120px_rgba(0,0,0,0.7)]"
             style={{
               transformStyle: "preserve-3d",
               boxShadow:
@@ -32,7 +32,16 @@ export default function ThirdSection() {
             transition={{ duration: 1.2, ease: "easeOut" }}
             viewport={{ once: true, amount: 0.4 }}
           >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-orange-500/10" />
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full rounded-2xl"
+            >
+              <source src="/video_1.mp4" type="video/mp4" />
+            </video>
+            <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 via-transparent to-orange-500/10" />
             <div className="absolute -bottom-12 left-1/2 h-24 w-2/3 -translate-x-1/2 rounded-full bg-orange-500/25 blur-[80px]" />
           </motion.div>
         </motion.div>

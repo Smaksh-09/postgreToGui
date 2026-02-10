@@ -63,3 +63,41 @@ body {
   scrollbar-width: thin;
   scrollbar-color: #262626 #0a0a0a;
 }
+
+/* Animated border glow for bento cards */
+@keyframes border-glow {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 200% 200%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+.bento-glow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    130deg,
+    transparent 20%,
+    rgba(249, 115, 22, 0.6) 40%,
+    rgba(239, 68, 68, 0.5) 50%,
+    rgba(249, 115, 22, 0.6) 60%,
+    transparent 80%
+  );
+  background-size: 300% 300%;
+  animation: border-glow 6s ease infinite;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
