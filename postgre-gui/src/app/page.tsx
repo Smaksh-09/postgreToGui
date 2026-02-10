@@ -4,6 +4,8 @@ import Hero from "../components/ui/Hero";
 import Loop from "../components/ui/Loop";
 import ThirdSection from "../components/ui/ThirdSection";
 import FourthSection from "../components/ui/FourthSection";
+import Marquee from "../components/ui/Marquee";
+import Footer from "../components/ui/Footer";
 
 export default function Home() {
   return (
@@ -50,6 +52,8 @@ export default function Home() {
       {/* The next sections */}
       <ThirdSection />
       <FourthSection />
+      <Marquee />
+      <Footer />
     </main>
   );
 }
