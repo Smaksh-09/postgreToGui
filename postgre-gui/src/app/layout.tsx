@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Prism | The Database Interface",
   description: "Visualize your data instantly.",
+  icons: {
+    icon: "/logo_img.png",
+    shortcut: "/logo_img.png",
+    apple: "/logo_img.png",
+  },
 };
 
 export default function RootLayout({
