@@ -5,7 +5,8 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   // 1. Check if trying to access protected API routes
   if (request.nextUrl.pathname.startsWith('/api/query') || 
-      request.nextUrl.pathname.startsWith('/api/schema')) {
+      request.nextUrl.pathname.startsWith('/api/schema') ||
+      request.nextUrl.pathname.startsWith('/api/scan-pii')) {
     
     // Check for the Guest Cookie OR a User Auth Token
     const guestSession = request.cookies.get('db_session_guest');

@@ -14,6 +14,13 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import TableNode, { TableNodeData } from './TableNode';
 
+type PiiReport = {
+  riskScore?: { level: string; score: number };
+  infectedNodes?: Record<string, "HIGH" | "MEDIUM">;
+  infectedEdges?: string[];
+  improvements?: string[];
+};
+
 // --- AUTO LAYOUT LOGIC ---
 const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   if (nodes.length === 0) return { nodes, edges };
@@ -47,9 +54,10 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 interface SchemaGraphProps {
   data: { tables: any[]; relations: any[] };
   onNodeClick?: (tableName: string) => void;
+  piiReport?: PiiReport | null;
 }
 
-export default function SchemaGraph({ data, onNodeClick }: SchemaGraphProps) {
+export default function SchemaGraph({ data, onNodeClick, piiReport }: SchemaGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
@@ -69,12 +77,13 @@ export default function SchemaGraph({ data, onNodeClick }: SchemaGraphProps) {
           type: col.type,
           isPk: false,
         })),
+        riskLevel: undefined,
       },
       position: { x: 0, y: 0 },
     }));
 
-    const newEdges: Edge[] = (data.relations || []).map((rel: any, i: number) => ({
-      id: `e-${i}`,
+    const newEdges: Edge[] = (data.relations || []).map((rel: any) => ({
+      id: `e-${rel.source_table}.${rel.source_column}-${rel.target_table}.${rel.target_column}`,
       source: rel.source_table,
       target: rel.target_table,
       animated: true,
@@ -86,6 +95,48 @@ export default function SchemaGraph({ data, onNodeClick }: SchemaGraphProps) {
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
   }, [data, setNodes, setEdges]);
+
+  // Apply PII scan "glow" without disturbing the layout.
+  useEffect(() => {
+    const infectedNodes = piiReport?.infectedNodes ?? {};
+    const infectedEdgeIds = new Set(piiReport?.infectedEdges ?? []);
+
+    setNodes((prev) =>
+      prev.map((n) => {
+        const risk = infectedNodes[n.data.label];
+        return {
+          ...n,
+          data: {
+            ...n.data,
+            riskLevel: risk,
+          },
+        };
+      })
+    );
+
+    setEdges((prev) =>
+      prev.map((e) => {
+        const isInfected = infectedEdgeIds.has(e.id);
+        if (!isInfected) {
+          return {
+            ...e,
+            animated: e.animated,
+            style: { stroke: '#f97316', strokeWidth: 2 },
+          };
+        }
+
+        return {
+          ...e,
+          animated: true,
+          style: {
+            stroke: '#ef4444',
+            strokeWidth: 3,
+            filter: 'drop-shadow(0 0 8px rgba(239, 68, 68, 0.8))',
+          },
+        };
+      })
+    );
+  }, [piiReport, data, setNodes, setEdges]);
 
   const handleNodeClick = useCallback((event: any, node: Node) => {
       if (onNodeClick) onNodeClick(node.data.label);

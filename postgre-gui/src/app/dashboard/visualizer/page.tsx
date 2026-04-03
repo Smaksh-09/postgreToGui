@@ -1,7 +1,7 @@
 "use client";
 
 import Sidebar from "../../../components/Dashboard/Sidebar";
-import { Sparkles, Play } from "lucide-react";
+import { Sparkles, Play, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import ResultsTable from "../../../components/ui/ResultsTable";
 import { useEffect, useState } from "react";
@@ -12,9 +12,18 @@ import QueryDrawer, {
 } from "../../../components/ui/QueryDrawer";
 import LoadingSpinner from "../../../components/ui/LoadingSpinner";
 import QueryHistory from "../../../components/ui/QueryHistory";
+import PiiAuditSidebar from "../../../components/Dashboard/PiiAuditSidebar";
+
+type PiiReport = {
+  riskScore?: { level: string; score: number };
+  infectedNodes?: Record<string, "HIGH" | "MEDIUM">;
+  infectedEdges?: string[];
+  improvements?: string[];
+};
 
 export default function VisualizerPage() {
   const router = useRouter();
+  const PII_REPORT_STORAGE_KEY = "pii_audit_report_v1";
   const [schemaData, setSchemaData] = useState<{ tables: any[]; relations: any[] }>({
     tables: [],
     relations: [],
@@ -27,6 +36,35 @@ export default function VisualizerPage() {
   const [promptValue, setPromptValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [piiReport, setPiiReport] = useState<PiiReport | null>(null);
+  const [isPiiSidebarOpen, setIsPiiSidebarOpen] = useState(false);
+
+  // Restore last generated audit from localStorage (if available).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(PII_REPORT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as PiiReport;
+      if (parsed && (parsed.infectedNodes || parsed.improvements)) {
+        setPiiReport(parsed);
+      }
+    } catch {
+      // Ignore restore failures (corrupt storage, blocked storage, etc).
+    }
+  }, [PII_REPORT_STORAGE_KEY]);
+
+  // Persist the latest report locally once generated.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!piiReport) return;
+    try {
+      window.localStorage.setItem(PII_REPORT_STORAGE_KEY, JSON.stringify(piiReport));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [PII_REPORT_STORAGE_KEY, piiReport]);
 
   useEffect(() => {
     async function fetchSchema() {
@@ -89,6 +127,48 @@ export default function VisualizerPage() {
     setIsDrawerOpen(true);
   };
 
+  const handleRunSecurityAudit = async () => {
+    if (!schemaData?.tables?.length) return;
+    setIsScanning(true);
+    setIsPiiSidebarOpen(false);
+    setPiiReport(null);
+    setActiveTable(""); // Ensure the graph is visible while results are highlighted.
+
+    try {
+      const res = await fetch("/api/scan-pii", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tables: schemaData.tables,
+          relations: schemaData.relations,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data?.error) {
+        throw new Error(data?.error || "PII scan failed");
+      }
+
+      setPiiReport(data);
+      setIsPiiSidebarOpen(false);
+    } catch (err: unknown) {
+      console.error(err);
+      const message =
+        err && typeof err === "object" && "message" in err && typeof (err as Record<string, unknown>).message === "string"
+          ? (err as Record<string, unknown>).message
+          : "PII scan failed. Please try again.";
+      setPiiReport({
+        riskScore: { level: "NONE", score: 0 },
+        infectedNodes: {},
+        infectedEdges: [],
+        improvements: [message],
+      });
+      setIsPiiSidebarOpen(false);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <div className="flex h-screen w-full bg-midnight-950 text-white overflow-hidden">
       <Sidebar
@@ -123,6 +203,28 @@ export default function VisualizerPage() {
                 Close Table ✕
               </button>
             )}
+            <button
+              onClick={handleRunSecurityAudit}
+              disabled={isScanning || loading}
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 transition-colors shadow-[0_0_15px_rgba(239,68,68,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isScanning ? (
+                <LoadingSpinner size={14} />
+              ) : (
+                <Shield className="h-3.5 w-3.5" />
+              )}
+              🛡️ Run Security Audit
+            </button>
+            {piiReport && (
+              <button
+                onClick={() => setIsPiiSidebarOpen((v) => !v)}
+                disabled={isScanning}
+                className="flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.06)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Shield className="h-3.5 w-3.5 text-orange-400" />
+                {isPiiSidebarOpen ? "Hide Audit" : "Audit Report"}
+              </button>
+            )}
             <button className="flex items-center gap-2 rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-500 transition-colors shadow-[0_0_15px_rgba(234,88,12,0.3)]">
               <Play className="h-3.5 w-3.5 fill-current" />
               Run Query
@@ -132,6 +234,11 @@ export default function VisualizerPage() {
 
         {/* WORKSPACE CANVAS */}
         <div className="relative flex-1 bg-[url('/grid-pattern.svg')] bg-center">
+          <PiiAuditSidebar
+            isOpen={isPiiSidebarOpen}
+            onClose={() => setIsPiiSidebarOpen(false)}
+            report={piiReport}
+          />
           {loading && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#050505]/70 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-sm text-white/60">
@@ -151,6 +258,7 @@ export default function VisualizerPage() {
               <SchemaGraph
                 data={schemaData}
                 onNodeClick={(name) => setActiveTable(name)}
+                piiReport={piiReport}
               />
             </div>
           )}
