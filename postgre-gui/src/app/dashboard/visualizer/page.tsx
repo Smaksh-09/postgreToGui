@@ -153,15 +153,17 @@ export default function VisualizerPage() {
       setIsPiiSidebarOpen(false);
     } catch (err: unknown) {
       console.error(err);
-      const message =
-        err && typeof err === "object" && "message" in err && typeof (err as Record<string, unknown>).message === "string"
-          ? (err as Record<string, unknown>).message
-          : "PII scan failed. Please try again.";
+      
+      // Much cleaner TypeScript error narrowing
+      const message = err instanceof Error 
+        ? err.message 
+        : "PII scan failed. Please try again.";
+
       setPiiReport({
         riskScore: { level: "NONE", score: 0 },
         infectedNodes: {},
         infectedEdges: [],
-        improvements: [message],
+        improvements: [message], // Now strictly typed as a string
       });
       setIsPiiSidebarOpen(false);
     } finally {
